@@ -1,0 +1,81 @@
+version: "3.8"
+
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    restart: always
+    networks:
+      - monitoring
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - "/:/rootfs:ro"
+      - "/var/run:/var/run:rw"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker/:/var/lib/docker:ro"
+    restart: always
+    networks:
+      - monitoring
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    restart: always
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources # Auto-add Prometheus as data source
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards # Auto-import cAdvisor dashboard
+      - ./grafana/dashboards:/var/lib/grafana/dashboards # Store dashboards locally
+    restart: always
+    networks:
+      - monitoring
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./template.tmpl:/etc/alertmanager/template/
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    ports:
+      - "9093:9093"
+    restart: always
+    networks:
+      - monitoring
+
+  alertmanager-discord:
+    image: benjojo/alertmanager-discord
+    container_name: alertmanager-discord
+    ports:
+      - "9094:9094"
+    environment:
+      DISCORD_WEBHOOK: "https://discordapp.com/api/webhooks/1337068579475951707/lWrCibnbxMQ_6Q3nPcrCdchpPOxl7pT0khqWRoENQeJ8S2O029H6ktYirwt-SYPln_hO"
+    restart: always
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
