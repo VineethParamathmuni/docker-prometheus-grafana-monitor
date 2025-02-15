@@ -6,9 +6,9 @@ services:
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml      
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--config.file=/etc/prometheus/prometheus.yml"      
     ports:
       - "9090:9090"
     restart: always
@@ -24,7 +24,7 @@ services:
       - "/:/rootfs:ro"
       - "/var/run:/var/run:rw"
       - "/sys:/sys:ro"
-      - "/var/lib/docker/:/var/lib/docker:ro"
+      - "/var/lib/docker/:/var/lib/docker:ro"            
     restart: always
     networks:
       - monitoring
@@ -32,31 +32,34 @@ services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node_exporter
+    volumes:
+      - "./docker_logs:/var/lib/node_exporter/textfile_collector"  # Store logs here
+    command:
+      - '--collector.textfile.directory=/var/lib/node_exporter/textfile_collector'
     ports:
       - "9100:9100"
     restart: always
     networks:
       - monitoring
 
-  grafana:
-    image: grafana/grafana
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources # Auto-add Prometheus as data source
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards # Auto-import cAdvisor dashboard
-      - ./grafana/dashboards:/var/lib/grafana/dashboards # Store dashboards locally
-    restart: always
-    networks:
-      - monitoring
+  # grafana:
+  #   image: grafana/grafana
+  #   container_name: grafana
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources # Auto-add Prometheus as data source
+  #     - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards # Auto-import cAdvisor dashboard
+  #     - ./grafana/dashboards:/var/lib/grafana/dashboards # Store dashboards locally
+  #   restart: always
+  #   networks:
+  #     - monitoring
 
   alertmanager:
     image: prom/alertmanager
     container_name: alertmanager
     volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
-      - ./template.tmpl:/etc/alertmanager/template/
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml      
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
     ports:
@@ -64,6 +67,19 @@ services:
     restart: always
     networks:
       - monitoring
+
+  log-script:
+    build: ./log-script
+    container_name: log-script
+    volumes:
+      - "./docker_logs:/logs"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    entrypoint: ["/bin/sh", "-c", "echo '' > /logs/container_logs.prom && /logs.sh"]
+    networks:
+      - monitoring
+    depends_on:
+      - cadvisor
+    restart: always
 
   alertmanager-discord:
     image: benjojo/alertmanager-discord
