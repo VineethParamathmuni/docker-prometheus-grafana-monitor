@@ -11,3 +11,36 @@ groups:
           description : |
             The container {{ $labels.name }} has been down for more than 1 minute. 
             **Last Logs** : {{$labels.logs}}          
+
+      - alert: ContainerUnhealthy
+        expr: time() - container_health > 60
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 [{{ $labels.server_type }}] Docker container is unhealthy!"
+          description : |
+            The container {{ $labels.name }} has been unhealthy for more than 1 minute. 
+            **Last Logs** : {{$labels.logs}}          
+
+      - alert: ContainerHighCPUUsage
+        expr: time() - container_cpu_alert > 60
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 [{{ $labels.server_type }}] Docker container CPU Usage is high!"
+          description : |
+            The container {{ $labels.name }} has been utilizing more than 80% of CPU for more than 5 minutes. 
+            **Last Logs** : {{$labels.logs}}          
+
+      - alert: ContainerHighMemoryUsage
+        expr: time() - container_memory_alert > 60
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 [{{ $labels.server_type }}] Docker container Memory Usage is high!"
+          description : |
+            The container {{ $labels.name }} memory usage has been more than 80% for more than 5 minutes. 
+            **Last Logs** : {{$labels.logs}}       
