@@ -6,7 +6,7 @@ CPU_ALERT_FILE="/logs/container_cpu.prom"
 MEMORY_ALERT_FILE="/logs/container_memory.prom"
 
 cleanup() {  
-  echo "" > "$LOG_FILE"
+  echo "" > "$DOWN_FILE"
   echo "" > "$HEALTH_FILE"
   echo "" > "$CPU_ALERT_FILE"
   echo "" > "$MEMORY_ALERT_FILE"
@@ -24,7 +24,7 @@ chmod 777 "$(dirname "$HEALTH_FILE")" || sudo chmod 777 "$(dirname "$HEALTH_FILE
 chmod 777 "$(dirname "$CPU_ALERT_FILE")" || sudo chmod 777 "$(dirname "$CPU_ALERT_FILE")"
 chmod 777 "$(dirname "$MEMORY_ALERT_FILE")" || sudo chmod 777 "$(dirname "$MEMORY_ALERT_FILE")"
 
-IGNORE_CONTAINERS=("" "") # Add containers as space-separated-values to this array to be ignored
+IGNORE_CONTAINERS=("" "") # Add containers as space-separated-values to this array to be ignored    
 
 docker events --format '{{.Status}} {{.Actor.Attributes.name}}' | while read event container; do
   if [[ "$event" == "stop" ]] && [[ ! " ${IGNORE_CONTAINERS[@]} " =~ " $container " ]]; then          
@@ -61,7 +61,7 @@ while true; do
       LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g')
 
       echo "docker_container_health_status{name=\"$container\", status=\"unhealthy\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$HEALTH_FILE"
-      echo "Health status written to $HEALTH_FILE"
+      echo "Health status written to $HEALTH_FILE"      
     fi
   done
 
@@ -74,7 +74,7 @@ while true; do
   done
 
   sleep 10  # Check every 10 seconds
-done
+done &
 
 CPU_THRESHOLD=80
 MEM_THRESHOLD=80
@@ -83,13 +83,12 @@ while true; do
   docker stats --no-stream --format "{{.Name}} {{.CPUPerc}} {{.MemPerc}}" | while read container cpu mem; do
     cpu=${cpu%\%}  # Remove % sign
     mem=${mem%\%}
-
     if (( $(echo "$cpu > $CPU_THRESHOLD" | bc -l) )); then
       if ! grep -q "name=\"$container\"" "$CPU_ALERT_FILE"; then 
         echo "🚨 High CPU Usage: $container is using $cpu% CPU"
         LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g')
         TIMESTAMP=$(date +%s)  
-        echo "container_cpu_alert{name=\"$container\", usage=\"$cpu\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$CPU_ALERT_FILE"      
+        echo "container_cpu_alert{name=\"$container\", usage=\"$cpu\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$CPU_ALERT_FILE"
       fi
     else     
       if grep -q "name=\"$container\"" "$CPU_ALERT_FILE"; then
@@ -112,5 +111,6 @@ while true; do
       fi
     fi
   done
+
   sleep 10
-done
+done 

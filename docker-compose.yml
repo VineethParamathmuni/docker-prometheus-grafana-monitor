@@ -6,9 +6,9 @@ services:
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml      
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml               
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"      
+      - "--config.file=/etc/prometheus/prometheus.yml"          
     ports:
       - "9090:9090"
     restart: always
@@ -74,7 +74,7 @@ services:
     volumes:
       - "./docker_logs:/logs"
       - "/var/run/docker.sock:/var/run/docker.sock"
-    entrypoint: ["/bin/sh", "-c", "echo '' > /logs/container_logs.prom && echo '' > /logs/container_health.prom && echo '' > /logs/container_memory.prom && echo '' > /logs/container_cpu.prom && /logs.sh"]
+    entrypoint: ["/bin/sh", "-c", "echo '' > /logs/container_down.prom && echo '' > /logs/container_health.prom && echo '' > /logs/container_memory.prom && echo '' > /logs/container_cpu.prom && /logs.sh"]
     networks:
       - monitoring
     depends_on:
