@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LOG_FILE="/logs/container_logs.prom"
+DOWN_FILE="/logs/container_down.prom"
 HEALTH_FILE="/logs/container_health.prom"
 CPU_ALERT_FILE="/logs/container_cpu.prom"
 MEMORY_ALERT_FILE="/logs/container_memory.prom"
@@ -36,17 +36,17 @@ docker events --format '{{.Status}} {{.Actor.Attributes.name}}' | while read eve
     TIMESTAMP=$(date +%s)
 
     # Write logs to the file
-    echo "container_logs{name=\"$container\", logs=\"$LOGS\", stopped_at=\"$TIMESTAMP\"} 1" >> "$LOG_FILE"
+    echo "container_down{name=\"$container\", logs=\"$LOGS\", stopped_at=\"$TIMESTAMP\"} 1" >> "$DOWN_FILE"
 
     if [[ $? -eq 0 ]]; then
-      echo "Logs written to $LOG_FILE"
+      echo "Logs written to $DOWN_FILE"
     else
-      echo "❌ Failed to write logs to $LOG_FILE"
+      echo "❌ Failed to write logs to $DOWN_FILE"
     fi
   elif [[ "$event" == "start" ]]; then
-    if grep -q "name=\"$container\"" "$LOG_FILE"; then
+    if grep -q "name=\"$container\"" "$DOWN_FILE"; then
       echo "Removing logs for restarted container: $container"
-      sed -i "/name=\"$container\"/d" "$LOG_FILE"  
+      sed -i "/name=\"$container\"/d" "$DOWN_FILE"  
     fi 
   fi
 done &
@@ -60,7 +60,7 @@ while true; do
       TIMESTAMP=$(date +%s)
       LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g')
 
-      echo "container_health{name=\"$container\", status=\"unhealthy\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$HEALTH_FILE"
+      echo "docker_container_health_status{name=\"$container\", status=\"unhealthy\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$HEALTH_FILE"
       echo "Health status written to $HEALTH_FILE"
     fi
   done

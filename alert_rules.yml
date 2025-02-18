@@ -2,7 +2,7 @@ groups:
   - name: docker_alerts
     rules:
       - alert: ContainerDown
-        expr: time() - container_logs > 60
+        expr: time() - container_down > 60
         for: 1m
         labels:
           severity: critical
@@ -13,7 +13,7 @@ groups:
             **Last Logs** : {{$labels.logs}}          
 
       - alert: ContainerUnhealthy
-        expr: time() - container_health > 60
+        expr: docker_container_health_status{status="unhealthy"} == 1
         for: 1m
         labels:
           severity: critical
