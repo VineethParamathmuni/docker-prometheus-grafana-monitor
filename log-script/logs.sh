@@ -14,17 +14,17 @@ cleanup() {
 
 trap cleanup EXIT
 
-mkdir -p "$(dirname "$LOG_FILE")" || sudo mkdir -p "$(dirname "$LOG_FILE")"
+mkdir -p "$(dirname "$DOWN_FILE")" || sudo mkdir -p "$(dirname "$DOWN_FILE")"
 mkdir -p "$(dirname "$HEALTH_FILE")" || sudo mkdir -p "$(dirname "$HEALTH_FILE")"
 mkdir -p "$(dirname "$CPU_ALERT_FILE")" || sudo mkdir -p "$(dirname "$CPU_ALERT_FILE")"
 mkdir -p "$(dirname "$MEMORY_ALERT_FILE")" || sudo mkdir -p "$(dirname "$MEMORY_ALERT_FILE")"
 
-chmod 777 "$(dirname "$LOG_FILE")" || sudo chmod 777 "$(dirname "$LOG_FILE")"
+chmod 777 "$(dirname "$DOWN_FILE")" || sudo chmod 777 "$(dirname "$DOWN_FILE")"
 chmod 777 "$(dirname "$HEALTH_FILE")" || sudo chmod 777 "$(dirname "$HEALTH_FILE")"
 chmod 777 "$(dirname "$CPU_ALERT_FILE")" || sudo chmod 777 "$(dirname "$CPU_ALERT_FILE")"
 chmod 777 "$(dirname "$MEMORY_ALERT_FILE")" || sudo chmod 777 "$(dirname "$MEMORY_ALERT_FILE")"
 
-IGNORE_CONTAINERS=("" "") # Add containers as space-separated-values to this array to be ignored    
+IGNORE_CONTAINERS=("") # Add container names as space-separated-values to be ignored    
 
 docker events --format '{{.Status}} {{.Actor.Attributes.name}}' | while read event container; do
   if [[ "$event" == "stop" ]] && [[ ! " ${IGNORE_CONTAINERS[@]} " =~ " $container " ]]; then          
