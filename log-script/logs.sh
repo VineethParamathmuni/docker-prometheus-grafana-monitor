@@ -4,12 +4,14 @@ DOWN_FILE="/logs/container_down.prom"
 HEALTH_FILE="/logs/container_health.prom"
 CPU_ALERT_FILE="/logs/container_cpu.prom"
 MEMORY_ALERT_FILE="/logs/container_memory.prom"
+CPU_THRESHOLD_FILE="/logs/cpu_threshold.prom"
 
 cleanup() {  
-  echo "" > "$DOWN_FILE"
-  echo "" > "$HEALTH_FILE"
-  echo "" > "$CPU_ALERT_FILE"
-  echo "" > "$MEMORY_ALERT_FILE"
+  > "$DOWN_FILE"
+  > "$HEALTH_FILE"
+  > "$CPU_ALERT_FILE"
+  > "$MEMORY_ALERT_FILE"  
+  > "$CPU_THRESHOLD_FILE"
 }
 
 trap cleanup EXIT
@@ -18,11 +20,13 @@ mkdir -p "$(dirname "$DOWN_FILE")" || sudo mkdir -p "$(dirname "$DOWN_FILE")"
 mkdir -p "$(dirname "$HEALTH_FILE")" || sudo mkdir -p "$(dirname "$HEALTH_FILE")"
 mkdir -p "$(dirname "$CPU_ALERT_FILE")" || sudo mkdir -p "$(dirname "$CPU_ALERT_FILE")"
 mkdir -p "$(dirname "$MEMORY_ALERT_FILE")" || sudo mkdir -p "$(dirname "$MEMORY_ALERT_FILE")"
+mkdir -p "$(dirname "$CPU_THRESHOLD_FILE")" || sudo mkdir -p "$(dirname "$CPU_THRESHOLD_FILE")"
 
 chmod 777 "$(dirname "$DOWN_FILE")" || sudo chmod 777 "$(dirname "$DOWN_FILE")"
 chmod 777 "$(dirname "$HEALTH_FILE")" || sudo chmod 777 "$(dirname "$HEALTH_FILE")"
 chmod 777 "$(dirname "$CPU_ALERT_FILE")" || sudo chmod 777 "$(dirname "$CPU_ALERT_FILE")"
 chmod 777 "$(dirname "$MEMORY_ALERT_FILE")" || sudo chmod 777 "$(dirname "$MEMORY_ALERT_FILE")"
+chmod 777 "$(dirname "$CPU_THRESHOLD_FILE")" || sudo chmod 777 "$(dirname "$CPU_THRESHOLD_FILE")"
 
 IGNORE_CONTAINERS=("") # Add container names as space-separated-values to be ignored    
 
@@ -79,10 +83,10 @@ done &
 CPU_THRESHOLD=80
 MEM_THRESHOLD=80
 
-while true; do
-  docker stats --no-stream --format "{{.Name}} {{.CPUPerc}} {{.MemPerc}}" | while read container cpu mem; do
+while true; do    
+  docker stats --no-stream --format "{{.Name}} {{.CPUPerc}} {{.MemPerc}}" | while read container cpu mem; do    
     cpu=${cpu%\%}  # Remove % sign
-    mem=${mem%\%}
+    mem=${mem%\%}          
     if (( $(echo "$cpu > $CPU_THRESHOLD" | bc -l) )); then
       if ! grep -q "name=\"$container\"" "$CPU_ALERT_FILE"; then 
         echo "🚨 High CPU Usage: $container is using $cpu% CPU"
@@ -110,7 +114,28 @@ while true; do
         sed -i "/name=\"$container\"/d" "$MEMORY_ALERT_FILE"
       fi
     fi
-  done
+  done    
 
   sleep 10
-done 
+done&
+
+while true; do
+    TOTAL_CPU=0    
+    while read container cpu; do
+        cpu=${cpu%\%}  
+        TOTAL_CPU=$(echo "$TOTAL_CPU + $cpu" | bc)            
+    done < <(docker stats --no-stream --format "{{.Name}} {{.CPUPerc}}")    
+    if (( $(echo "$TOTAL_CPU > $CPU_THRESHOLD" | bc -l) )); then                   
+        if [ ! -s "$CPU_THRESHOLD_FILE" ]; then          
+          TIMESTAMP=$(date +%s)    
+          echo "cpu_threshold{detected_at=\"$TIMESTAMP\"} 1" > "$CPU_THRESHOLD_FILE"
+        fi
+    else        
+        if [ -s "$CPU_THRESHOLD_FILE" ]; then
+            echo "✅ CPU usage is back to normal. Removing alert log."
+            > "$CPU_THRESHOLD_FILE"  # Clears the file
+        fi
+    fi
+    
+    sleep 10
+done

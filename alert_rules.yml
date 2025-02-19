@@ -44,3 +44,33 @@ groups:
           description : |
             The container {{ $labels.name }} memory usage has been more than 80% for more than 5 minutes. 
             **Last Logs** : {{$labels.logs}}       
+
+      - alert: HostMemoryUsage
+        expr: (sum(container_memory_usage_bytes{name!=""})/ sum(node_memory_MemTotal_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 Host Memory Usage is high!"
+          description : |
+            Aggregated host memory usage has been more than 80% for over 5 minutes.    
+
+      - alert: HostCPUUsage
+        expr: time() - cpu_threshold > 60
+        for: 5m
+        labels:
+          severity: critical                    
+        annotations:
+          summary: "🚨 Host CPU Usage is high!"
+          description : |
+            Aggregated host CPU usage has been more than 80% for over 5 minutes.              
+
+      # - alert: HostCPUUsage
+      #   expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100 > 80
+      #   for: 5m
+      #   labels:
+      #     severity: critical                    
+      #   annotations:
+      #     summary: "🚨 Host CPU Usage is high!"
+      #     description : |
+      #       Aggregated host CPU usage has been more than 80% for over 5 minutes.              
