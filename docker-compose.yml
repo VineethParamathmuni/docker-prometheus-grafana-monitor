@@ -4,14 +4,28 @@ services:
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml               
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml  
+      - ./prometheus_data:/prometheus                 
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"          
+      - "--config.file=/etc/prometheus/prometheus.yml"   
+      - "--log.level=debug"
+      - "--log.format=json"            
     ports:
       - "9090:9090"
     restart: always
     networks:
-      - monitoring
+      - monitoring     
+
+  ngrep:
+    image: niden/ngrep  # Lightweight ngrep container
+    container_name: prometheus-ngrep
+    network_mode: "host"  # Required to capture network traffic on the host
+    command: ["sh", "-c", "> /logs/prometheus_http_traffic.log && ngrep -d any port 9090 >> /logs/prometheus_http_traffic.log"]
+    volumes:
+      - ./logs:/logs  # Mount logs to the host
+    restart: always
+    depends_on:
+      - prometheus         
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
