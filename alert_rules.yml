@@ -2,7 +2,7 @@ groups:
   - name: docker_alerts
     rules:
       - alert: ContainerDown
-        expr: time() - container_down > 60
+        expr: container_down == 1
         for: 1m
         labels:
           severity: critical
@@ -24,7 +24,7 @@ groups:
             **Last Logs** : {{$labels.logs}}          
 
       - alert: ContainerHighCPUUsage
-        expr: time() - container_cpu_alert > 60
+        expr: container_cpu_alert == 1
         for: 5m
         labels:
           severity: critical
@@ -35,7 +35,7 @@ groups:
             **Last Logs** : {{$labels.logs}}          
 
       - alert: ContainerHighMemoryUsage
-        expr: time() - container_memory_alert > 60
+        expr: container_memory_alert == 1
         for: 5m
         labels:
           severity: critical
