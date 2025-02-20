@@ -54,18 +54,18 @@ services:
     networks:
       - monitoring
 
-  # grafana:
-  #   image: grafana/grafana
-  #   container_name: grafana
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources # Auto-add Prometheus as data source
-  #     - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards # Auto-import cAdvisor dashboard
-  #     - ./grafana/dashboards:/var/lib/grafana/dashboards # Store dashboards locally
-  #   restart: always
-  #   networks:
-  #     - monitoring
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources # Auto-add Prometheus as data source
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards # Auto-import cAdvisor dashboard
+      - ./grafana/dashboards:/var/lib/grafana/dashboards # Store dashboards locally
+    restart: always
+    networks:
+      - monitoring
 
   alertmanager:
     image: prom/alertmanager

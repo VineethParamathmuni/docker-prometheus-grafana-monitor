@@ -37,7 +37,7 @@ docker events --format '{{.Status}} {{.Actor.Attributes.name}}' | while read eve
     # Fetch last 5 logs
     LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'| tr '\n' ' ')
 
-    TIMESTAMP=$(date +%s)
+    TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")
 
     # Write logs to the file
     echo "container_down{name=\"$container\", logs=\"$LOGS\", stopped_at=\"$TIMESTAMP\"} 1" >> "$DOWN_FILE"
@@ -61,7 +61,7 @@ while true; do
     if ! grep -q "name=\"$container\"" "$HEALTH_FILE"; then
       echo "Detected unhealthy container: $container"
 
-      TIMESTAMP=$(date +%s)
+      TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")
       LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'| tr '\n' ' ')
 
       echo "docker_container_health_status{name=\"$container\", status=\"unhealthy\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$HEALTH_FILE"
@@ -92,7 +92,7 @@ while true; do
       if ! grep -q "name=\"$container\"" "$CPU_ALERT_FILE"; then 
         echo "🚨 High CPU Usage: $container is using $cpu% CPU"
         LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'| tr '\n' ' ')
-        TIMESTAMP=$(date +%s)  
+        TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")
         echo "container_cpu_alert{name=\"$container\", usage=\"$cpu\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$CPU_ALERT_FILE"
       fi
     else     
@@ -106,7 +106,7 @@ while true; do
       if ! grep -q "name=\"$container\"" "$MEMORY_ALERT_FILE"; then      
         echo "🚨 High Memory Usage: $container is using $mem% memory"
         LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g' | tr '\n' ' ')
-        TIMESTAMP=$(date +%s)      
+        TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")  
         echo "container_memory_alert{name=\"$container\", usage=\"$mem\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$MEMORY_ALERT_FILE"
       fi  
     else     
@@ -128,7 +128,8 @@ while true; do
     done < <(docker stats --no-stream --format "{{.Name}} {{.CPUPerc}}")    
     if (( $(echo "$TOTAL_CPU > $CPU_THRESHOLD" | bc -l) )); then                   
         if [ ! -s "$CPU_THRESHOLD_FILE" ]; then          
-          TIMESTAMP=$(date +%s)    
+          TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")
+          echo "🚨 High CPU Usage: Host is running at $TOTAL_CPU%"
           echo "cpu_threshold{detected_at=\"$TIMESTAMP\"} 1" > "$CPU_THRESHOLD_FILE"
         fi
     else        
