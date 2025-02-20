@@ -35,7 +35,7 @@ docker events --format '{{.Status}} {{.Actor.Attributes.name}}' | while read eve
     echo "Detected stopped container: $container"
 
     # Fetch last 5 logs
-    LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g')
+    LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'| tr '\n' ' ')
 
     TIMESTAMP=$(date +%s)
 
@@ -62,7 +62,7 @@ while true; do
       echo "Detected unhealthy container: $container"
 
       TIMESTAMP=$(date +%s)
-      LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g')
+      LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'| tr '\n' ' ')
 
       echo "docker_container_health_status{name=\"$container\", status=\"unhealthy\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$HEALTH_FILE"
       echo "Health status written to $HEALTH_FILE"      
@@ -83,14 +83,15 @@ done &
 CPU_THRESHOLD=80
 MEM_THRESHOLD=80
 
-while true; do    
-  docker stats --no-stream --format "{{.Name}} {{.CPUPerc}} {{.MemPerc}}" | while read container cpu mem; do    
+while true; do  
+  docker stats --no-stream --format "{{.Name}} {{.CPUPerc}} {{.MemPerc}}" | while read container cpu mem; do
     cpu=${cpu%\%}  # Remove % sign
-    mem=${mem%\%}          
+    mem=${mem%\%}  
+
     if (( $(echo "$cpu > $CPU_THRESHOLD" | bc -l) )); then
       if ! grep -q "name=\"$container\"" "$CPU_ALERT_FILE"; then 
         echo "🚨 High CPU Usage: $container is using $cpu% CPU"
-        LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g')
+        LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'| tr '\n' ' ')
         TIMESTAMP=$(date +%s)  
         echo "container_cpu_alert{name=\"$container\", usage=\"$cpu\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$CPU_ALERT_FILE"
       fi
@@ -104,7 +105,7 @@ while true; do
     if (( $(echo "$mem > $MEM_THRESHOLD" | bc -l) )); then
       if ! grep -q "name=\"$container\"" "$MEMORY_ALERT_FILE"; then      
         echo "🚨 High Memory Usage: $container is using $mem% memory"
-        LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g')
+        LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g' | tr '\n' ' ')
         TIMESTAMP=$(date +%s)      
         echo "container_memory_alert{name=\"$container\", usage=\"$mem\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$MEMORY_ALERT_FILE"
       fi  
@@ -117,7 +118,7 @@ while true; do
   done    
 
   sleep 10
-done&
+done& 
 
 while true; do
     TOTAL_CPU=0    

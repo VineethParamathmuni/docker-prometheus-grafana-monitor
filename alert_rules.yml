@@ -42,7 +42,7 @@ groups:
         annotations:
           summary: "🚨 [{{ $labels.server_type }}] Docker container Memory Usage is high!"
           description : |
-            The container {{ $labels.name }} memory usage has been more than 80% for more than 5 minutes. 
+            The container {{ $labels.name }} memory usage has exceeded 80% for more than 5 minutes. 
             **Last Logs** : {{$labels.logs}}       
 
       - alert: HostMemoryUsage
@@ -53,17 +53,17 @@ groups:
         annotations:
           summary: "🚨 Host Memory Usage is high!"
           description : |
-            Aggregated host memory usage has been more than 80% for over 5 minutes.    
+            Aggregated host memory usage has exceeded 80% for over 5 minutes.    
 
       - alert: HostCPUUsage
-        expr: time() - cpu_threshold > 60
+        expr: cpu_threshold == 1
         for: 5m
         labels:
           severity: critical                    
         annotations:
           summary: "🚨 Host CPU Usage is high!"
           description : |
-            Aggregated host CPU usage has been more than 80% for over 5 minutes.              
+            Aggregated host CPU usage has exceeded 80% for over 5 minutes.              
 
       # - alert: HostCPUUsage
       #   expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100 > 80
