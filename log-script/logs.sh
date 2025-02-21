@@ -6,27 +6,23 @@ CPU_ALERT_FILE="/logs/container_cpu.prom"
 MEMORY_ALERT_FILE="/logs/container_memory.prom"
 CPU_THRESHOLD_FILE="/logs/cpu_threshold.prom"
 
+files=("$DOWN_FILE" "$HEALTH_FILE" "$CPU_ALERT_FILE" "$MEMORY_ALERT_FILE" "$CPU_THRESHOLD_FILE")
+
 cleanup() {  
-  > "$DOWN_FILE"
-  > "$HEALTH_FILE"
-  > "$CPU_ALERT_FILE"
-  > "$MEMORY_ALERT_FILE"  
-  > "$CPU_THRESHOLD_FILE"
+  for file in "${files[@]}"; do
+    > "$file"
+  done
 }
 
 trap cleanup EXIT
 
-mkdir -p "$(dirname "$DOWN_FILE")" || sudo mkdir -p "$(dirname "$DOWN_FILE")"
-mkdir -p "$(dirname "$HEALTH_FILE")" || sudo mkdir -p "$(dirname "$HEALTH_FILE")"
-mkdir -p "$(dirname "$CPU_ALERT_FILE")" || sudo mkdir -p "$(dirname "$CPU_ALERT_FILE")"
-mkdir -p "$(dirname "$MEMORY_ALERT_FILE")" || sudo mkdir -p "$(dirname "$MEMORY_ALERT_FILE")"
-mkdir -p "$(dirname "$CPU_THRESHOLD_FILE")" || sudo mkdir -p "$(dirname "$CPU_THRESHOLD_FILE")"
-
-chmod 777 "$(dirname "$DOWN_FILE")" || sudo chmod 777 "$(dirname "$DOWN_FILE")"
-chmod 777 "$(dirname "$HEALTH_FILE")" || sudo chmod 777 "$(dirname "$HEALTH_FILE")"
-chmod 777 "$(dirname "$CPU_ALERT_FILE")" || sudo chmod 777 "$(dirname "$CPU_ALERT_FILE")"
-chmod 777 "$(dirname "$MEMORY_ALERT_FILE")" || sudo chmod 777 "$(dirname "$MEMORY_ALERT_FILE")"
-chmod 777 "$(dirname "$CPU_THRESHOLD_FILE")" || sudo chmod 777 "$(dirname "$CPU_THRESHOLD_FILE")"
+for file in "${files[@]}"; do
+  dir_path="$(dirname "$file")"
+    
+  mkdir -p "$dir_path" || sudo mkdir -p "$dir_path"
+    
+  chmod 777 "$dir_path" || sudo chmod 777 "$dir_path"
+done
 
 IGNORE_CONTAINERS=("") # Add container names as space-separated-values to be ignored    
 
@@ -37,7 +33,7 @@ docker events --format '{{.Status}} {{.Actor.Attributes.name}}' | while read eve
     # Fetch last 5 logs
     LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'| tr '\n' ' ')
 
-    TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")
+    TIMESTAMP=$(date +"%d-%b-%Y at %H:%M:%S")
 
     # Write logs to the file
     echo "container_down{name=\"$container\", logs=\"$LOGS\", stopped_at=\"$TIMESTAMP\"} 1" >> "$DOWN_FILE"
@@ -82,11 +78,13 @@ done &
 
 CPU_THRESHOLD=80
 MEM_THRESHOLD=80
+CPU_COUNT=$(nproc) #to get number of cpu cores on the host
 
 while true; do  
   docker stats --no-stream --format "{{.Name}} {{.CPUPerc}} {{.MemPerc}}" | while read container cpu mem; do
     cpu=${cpu%\%}  # Remove % sign
-    mem=${mem%\%}  
+    mem=${mem%\%}      
+    cpu=$(echo "$cpu / $CPU_COUNT" | bc -l)    
 
     if (( $(echo "$cpu > $CPU_THRESHOLD" | bc -l) )); then
       if ! grep -q "name=\"$container\"" "$CPU_ALERT_FILE"; then 
@@ -94,6 +92,7 @@ while true; do
         LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g'| tr '\n' ' ')
         TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")
         echo "container_cpu_alert{name=\"$container\", usage=\"$cpu\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$CPU_ALERT_FILE"
+        echo "Logs written to $CPU_ALERT_FILE"
       fi
     else     
       if grep -q "name=\"$container\"" "$CPU_ALERT_FILE"; then
@@ -108,6 +107,7 @@ while true; do
         LOGS=$(docker logs --tail 5 "$container" 2>&1 | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g' | tr '\n' ' ')
         TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")  
         echo "container_memory_alert{name=\"$container\", usage=\"$mem\", logs=\"$LOGS\", detected_at=\"$TIMESTAMP\"} 1" >> "$MEMORY_ALERT_FILE"
+        echo "Logs written to $MEMORY_ALERT_FILE"
       fi  
     else     
       if grep -q "name=\"$container\"" "$MEMORY_ALERT_FILE"; then
@@ -125,12 +125,15 @@ while true; do
     while read container cpu; do
         cpu=${cpu%\%}  
         TOTAL_CPU=$(echo "$TOTAL_CPU + $cpu" | bc)            
-    done < <(docker stats --no-stream --format "{{.Name}} {{.CPUPerc}}")    
+    done < <(docker stats --no-stream --format "{{.Name}} {{.CPUPerc}}")   
+    TOTAL_CPU=$(echo "$TOTAL_CPU / $CPU_COUNT" | bc -l) 
+
     if (( $(echo "$TOTAL_CPU > $CPU_THRESHOLD" | bc -l) )); then                   
         if [ ! -s "$CPU_THRESHOLD_FILE" ]; then          
           TIMESTAMP=$(date +"%d-%b-%Y %H:%M:%S")
           echo "🚨 High CPU Usage: Host is running at $TOTAL_CPU%"
           echo "cpu_threshold{detected_at=\"$TIMESTAMP\"} 1" > "$CPU_THRESHOLD_FILE"
+          echo "Logs written to $CPU_THRESHOLD_FILE"
         fi
     else        
         if [ -s "$CPU_THRESHOLD_FILE" ]; then

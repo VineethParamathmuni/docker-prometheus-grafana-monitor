@@ -24,7 +24,7 @@
             "title": "Container Unhealthy",
             "targets": [
                 {
-                    "expr": "docker_container_health_status",
+                    "expr": "docker_container_health_status{status=\"unhealthy\"}",
                     "legendFormat": "{{name}} became unhealthy at {{detected_at}} UTC",
                     "datasource": "Prometheus"
                 }
@@ -49,7 +49,7 @@
             "targets": [
                 {
                     "expr": "container_memory_alert",
-                    "legendFormat": "{{name}}'s memory utilization crossed threshold at{{detected_at}} UTC",
+                    "legendFormat": "{{name}}'s memory utilization crossed threshold at {{detected_at}} UTC",
                     "datasource": "Prometheus"
                 }
             ],
@@ -61,7 +61,7 @@
             "targets": [
                 {
                     "expr": "cpu_threshold",
-                    "legendFormat": "Host's CPU utilization crossed threshold {{detected_at}} UTC",
+                    "legendFormat": "Host's CPU utilization crossed threshold at {{detected_at}} UTC",
                     "datasource": "Prometheus"
                 }
             ],

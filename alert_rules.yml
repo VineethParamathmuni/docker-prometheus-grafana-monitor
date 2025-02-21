@@ -9,7 +9,7 @@ groups:
         annotations:
           summary: "🚨 [{{ $labels.server_type }}] Docker container is down!"
           description : |
-            The container {{ $labels.name }} has been down for more than 1 minute. 
+            The container {{ $labels.name }} went down on {{$labels.stopped_at}} UTC. 
             **Last Logs** : {{$labels.logs}}          
 
       - alert: ContainerUnhealthy
@@ -20,7 +20,7 @@ groups:
         annotations:
           summary: "🚨 [{{ $labels.server_type }}] Docker container is unhealthy!"
           description : |
-            The container {{ $labels.name }} has been unhealthy for more than 1 minute. 
+            The container {{ $labels.name }} has been unhealthy since {{$labels.detected_at}} UTC. 
             **Last Logs** : {{$labels.logs}}          
 
       - alert: ContainerHighCPUUsage
@@ -31,7 +31,7 @@ groups:
         annotations:
           summary: "🚨 [{{ $labels.server_type }}] Docker container CPU Usage is high!"
           description : |
-            The container {{ $labels.name }} has been utilizing more than 80% of CPU for more than 5 minutes. 
+            The container {{ $labels.name }} has been utilizing more than 80% of CPU since {{$labels.detected_at}} UTC. 
             **Last Logs** : {{$labels.logs}}          
 
       - alert: ContainerHighMemoryUsage
@@ -42,7 +42,7 @@ groups:
         annotations:
           summary: "🚨 [{{ $labels.server_type }}] Docker container Memory Usage is high!"
           description : |
-            The container {{ $labels.name }} memory usage has exceeded 80% for more than 5 minutes. 
+            The container {{ $labels.name }}'s memory usage has exceeded 80% since {{$labels.detected_at}} UTC. 
             **Last Logs** : {{$labels.logs}}       
 
       - alert: HostMemoryUsage
@@ -63,10 +63,10 @@ groups:
         annotations:
           summary: "🚨 Host CPU Usage is high!"
           description : |
-            Aggregated host CPU usage has exceeded 80% for over 5 minutes.              
+            Aggregated host CPU usage has exceeded 80% since {{$labels.detected_at}} UTC.              
 
       # - alert: HostCPUUsage
-      #   expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100 > 80
+      #   expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100 / count(node_cpu_seconds_total{mode="user"}) > 80
       #   for: 5m
       #   labels:
       #     severity: critical                    
