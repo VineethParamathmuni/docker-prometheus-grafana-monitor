@@ -86,7 +86,7 @@ services:
     volumes:
       - "./docker_logs:/logs"
       - "/var/run/docker.sock:/var/run/docker.sock"
-    entrypoint: ["/bin/sh", "-c", " > /logs/container_down.prom && > /logs/container_health.prom && > /logs/container_memory.prom && > /logs/container_cpu.prom && /logs.sh"]
+    entrypoint: ["/bin/sh", "-c", " > /logs/container_down.prom && > /logs/container_health.prom && > /logs/container_memory.prom && > /logs/container_cpu.prom && > /logs/cpu_threshold.prom && /logs.sh"]
     networks:
       - monitoring
     depends_on:
